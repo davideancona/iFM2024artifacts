@@ -1,0 +1,50 @@
+pub(pubId, topic, msgId) matches {agent: 'pub', operation: 'send', id: pubId, topic: topic, msgId: msgId};
+subs(subId, topic) matches {agent: 'sub', operation: 'subscription', id: subId, topic: topic};
+recv(subId, topic, msgId, pubId) matches {agent: 'sub', operation: 'receive', id: subId, topic: topic, msgId: msgId, sender: pubId};
+newPub(pubId) matches {agent: 'pub', operation:'new', id:pubId};
+
+pub(pubId) matches pub(pubId,_,_);
+pub matches pub(_);
+
+recv(subId,topic) matches recv(subId, topic, _, _);
+recv matches recv(_,_,_,_);
+
+subs matches subs(_,_);
+notSubs(subId,topic) not matches subs(subId,topic);
+notSubs not matches subs;
+
+newPub matches newPub(_);
+notNewPub(pubId) not matches newPub(pubId);
+notNewPub not matches newPub;
+
+involve(pubId,subId, topic) matches pub(pubId, topic, _) | recv(subId, topic, _, pubId);
+subsOrRecv matches subs | recv;
+newPubOrPub matches newPub | pub; 
+
+relevant matches pub | subs | recv | newPub;
+
+Main = relevant >>
+   (
+    NoMultipleSubs /\ NoMultipleNewPub /\
+    (subsOrRecv >> SubsThenRecv) /\
+    (newPubOrPub >> NewPubThenPub) /\
+    CheckSubs /\ CheckPub
+    );
+
+NoMultipleSubs = notSubs* {let topic, subId; subs(subId, topic)(notSubs(subId,topic)* /\ NoMultipleSubs)}?;
+    
+NoMultipleNewPub = notNewPub* {let pubId; newPub(pubId)(notNewPub(pubId)* /\ NoMultipleNewPub)}?;
+
+SubsThenRecv = {let topic, subId; subs(subId, topic) (recv(subId,topic)* | SubsThenRecv )}?;
+
+NewPubThenPub = {let pubId; newPub(pubId) (pub(pubId)* | NewPubThenPub )}?;
+
+CheckSubs = notSubs* {let subId, topic; subs(subId, topic) (GenCheckSubs<subId, topic> /\ CheckSubs)}?;
+
+GenCheckSubs<subId, topic> = notNewPub* {let pubId; newPub(pubId) ((involve(pubId, subId, topic) >> Queue<pubId, subId, topic>) /\ GenCheckSubs<subId, topic>)}?;
+
+CheckPub = notNewPub* {let pubId; newPub(pubId) (GenCheckPub<pubId> /\ CheckPub)}?;
+
+GenCheckPub<pubId> = notSubs* {let topic, subId; subs(subId, topic) ((involve(pubId, subId, topic) >> Queue<pubId, subId, topic>) /\ GenCheckPub<pubId>)}?;
+
+Queue<pubId, subId, topic> = { let msgId; pub(pubId, topic, msgId) ((recv | Queue<pubId, subId, topic>) /\ recv >> (recv(subId, topic, msgId, pubId) all))}?;
