@@ -51,4 +51,4 @@ CheckPub = notNewPub* {let pubId; newPub(pubId) (GenCheckPub<pubId> /\ CheckPub)
 
 GenCheckPub<pubId> = notSubs* {let topic, subId; subs(subId, topic) ((involve(pubId, subId, topic) >> Queue<pubId, subId, topic>) /\ GenCheckPub<pubId>)}?;
 
-Queue<pubId, subId, topic> = (unsubs(subId,topic) all) \/ { let msgId; pub(pubId, topic, msgId) ((recv | Queue<pubId, subId, topic>) /\ (recv >> recv(subId, topic, msgId, pubId) all))}?;
+Queue<pubId, subId, topic> = unsubs(subId,topic) \/ { let msgId; pub(pubId, topic, msgId) ((recv | Queue<pubId, subId, topic>) /\ (recv >> recv(subId, topic, msgId, pubId) all))}?;
