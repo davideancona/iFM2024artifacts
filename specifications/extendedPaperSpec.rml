@@ -45,7 +45,7 @@ NewPubThenPub = {let pubId; newPub(pubId) (pub(pubId)* | NewPubThenPub )}?;
 
 CheckSubs = notSubs* {let subId, topic; subs(subId, topic) (GenCheckSubs<subId, topic> /\ CheckSubs)}?;
 
-GenCheckSubs<subId, topic> = (unsubs(subId,topic) all) \/ (notNewPub* {let pubId; newPub(pubId) ((involve(pubId, subId, topic) >> Queue<pubId, subId, topic>) /\ GenCheckSubs<subId, topic>)}?);
+GenCheckSubs<subId, topic> = unsubs(subId,topic) \/ (notNewPub* {let pubId; newPub(pubId) ((involve(pubId, subId, topic) >> Queue<pubId, subId, topic>) /\ GenCheckSubs<subId, topic>)}?);
 
 CheckPub = notNewPub* {let pubId; newPub(pubId) (GenCheckPub<pubId> /\ CheckPub)}?;
 
