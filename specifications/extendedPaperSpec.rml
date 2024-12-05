@@ -3,9 +3,11 @@ subs(subId, topic) matches {agent: 'sub', operation: 'subscription', id: subId, 
 recv(subId, topic, msgId, pubId) matches {agent: 'sub', operation: 'receive', id: subId, topic: topic, msgId: msgId, sender: pubId};
 newPub(pubId) matches {agent: 'pub', operation:'new', id:pubId};
 unsubs(subId,topic) matches {agent: 'sub', operation: 'unsubscription', id: subId, topic: topic};
+delPub(pubId) matches {agent: 'pub', operation:'del', id:pubId}; 
 
 pub(pubId) matches pub(pubId,_,_);
 pub matches pub(_);
+notNewOrDelPub(pubId) not matches newPub(pubId) | delPub(pubId);
 
 recv(subId,topic) matches recv(subId, topic, _, _);
 recv matches recv(_,_,_,_);
@@ -37,11 +39,11 @@ Main = relevant >>
 
 NoMultipleSubs = notSubs* {let topic, subId; subs(subId, topic)((notSubsOrUnsubs(subId,topic)* unsubs(subId,topic) all) /\ NoMultipleSubs)}?;
     
-NoMultipleNewPub = notNewPub* {let pubId; newPub(pubId)(notNewPub(pubId)* /\ NoMultipleNewPub)}?;
+NoMultipleNewPub = notNewPub* {let pubId; newPub(pubId)((notNewOrDelPub(pubId)* delPub(pubId) all) /\ NoMultipleNewPub)}?;
 
 SubsThenRecv = {let topic, subId; subs(subId, topic) ((recv(subId,topic)* unsubs(subId,topic)) | SubsThenRecv )}?;
 
-NewPubThenPub = {let pubId; newPub(pubId) (pub(pubId)* | NewPubThenPub )}?;
+NewPubThenPub = {let pubId; newPub(pubId) ((pub(pubId)* del(pubId)) | NewPubThenPub )}?;
 
 CheckSubs = notSubs* {let subId, topic; subs(subId, topic) (GenCheckSubs<subId, topic> /\ CheckSubs)}?;
 
