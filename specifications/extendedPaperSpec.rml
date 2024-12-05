@@ -23,8 +23,10 @@ newPub matches newPub(_);
 notNewPub(pubId) not matches newPub(pubId);
 notNewPub not matches newPub;
 
-involve(pubId,subId, topic) matches pub(pubId, topic, _) | recv(subId, topic, _, pubId);
-newPubOrPub matches newPub | pub; 
+delPub matches delPub(_);
+newPubOrPubOrDelPub matches newPub | pub | delPub; 
+
+involve(pubId,subId, topic) matches pub(pubId, topic, _) | recv(subId, topic, _, pubId) | unsubs(subId,topic);
 
 relevant matches pub | subs | recv | newPub;
 
@@ -32,7 +34,7 @@ Main = relevant >>
    (
     NoMultipleSubs /\ NoMultipleNewPub /\
     (subsOrRecvOrUnsubs >> SubsThenRecv) /\
-    (newPubOrPub >> NewPubThenPub) /\
+    (newPubOrPubOrDelPub >> NewPubThenPub) /\
     CheckSubs /\ CheckPub
     );
 
@@ -46,10 +48,10 @@ NewPubThenPub = {let pubId; newPub(pubId) ((pub(pubId)* del(pubId)) | NewPubThen
 
 CheckSubs = notSubs* {let subId, topic; subs(subId, topic) (GenCheckSubs<subId, topic> /\ CheckSubs)}?;
 
-GenCheckSubs<subId, topic> = unsubs(subId,topic) \/ (notNewPub* {let pubId; newPub(pubId) ((involve(pubId, subId, topic) >> Queue<pubId, subId, topic>) /\ GenCheckSubs<subId, topic>)}?);
+GenCheckSubs<subId, topic> = ((unsubs(subId,topic) all) \/ (notNewPub GenCheckSubs<subId, topic>) \/ {let pubId; newPub(pubId) ((involve(pubId, subId, topic) >> Queue<pubId, subId, topic>) /\ GenCheckSubs<subId, topic>)})?;
 
 CheckPub = notNewPub* {let pubId; newPub(pubId) (GenCheckPub<pubId> /\ CheckPub)}?;
 
-GenCheckPub<pubId> = notSubs* {let topic, subId; subs(subId, topic) ((involve(pubId, subId, topic) >> Queue<pubId, subId, topic>) /\ GenCheckPub<pubId>)}?;
+GenCheckPub<pubId> = ((delPub(pubId) all) \/ (notSubs GenCheckPub<pubId>) \/ {let topic, subId; subs(subId, topic) ((involve(pubId, subId, topic) >> Queue<pubId, subId, topic>) /\ GenCheckPub<pubId>)})?;
 
-Queue<pubId, subId, topic> = unsubs(subId,topic) \/ { let msgId; pub(pubId, topic, msgId) ((recv | Queue<pubId, subId, topic>) /\ (recv >> recv(subId, topic, msgId, pubId) all))}?;
+Queue<pubId, subId, topic> = (unsubs(subId,topic) \/ { let msgId; pub(pubId, topic, msgId) ((recv | Queue<pubId, subId, topic>) /\ (recv >> recv(subId, topic, msgId, pubId) all))})?;
