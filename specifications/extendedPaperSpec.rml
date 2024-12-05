@@ -24,7 +24,6 @@ notNewPub(pubId) not matches newPub(pubId);
 notNewPub not matches newPub;
 
 involve(pubId,subId, topic) matches pub(pubId, topic, _) | recv(subId, topic, _, pubId);
-subsOrRecv matches subs | recv;
 newPubOrPub matches newPub | pub; 
 
 relevant matches pub | subs | recv | newPub;
@@ -32,7 +31,7 @@ relevant matches pub | subs | recv | newPub;
 Main = relevant >>
    (
     NoMultipleSubs /\ NoMultipleNewPub /\
-    (subsOrRecv >> SubsThenRecv) /\
+    (subsOrRecvOrUnsubs >> SubsThenRecv) /\
     (newPubOrPub >> NewPubThenPub) /\
     CheckSubs /\ CheckPub
     );
